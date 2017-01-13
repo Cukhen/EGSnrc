@@ -994,7 +994,7 @@ $COMIN-ELECTR; "default replacement produces the following:
                         "ET-Control,MEDIA,MISC,STACK,THRESH,UPHIIN,"
                         "UPHIOT,USEFUL,USER,RANDOM/;"
 ;COMIN/EII-DATA/;
-
+;COMIN/EM/;
 $REAL lambda_max, sigratio, u_tmp, v_tmp, w_tmp;
 LOGICAL random_tustep;
 
@@ -1185,7 +1185,7 @@ $start_new_particle;
                   "decisions about the maximum acceptable approximated CH step"
 
                 tustep = min(tustep,max(tperp,skindepth));
-
+				$EMFIELD INITIATE SET TUSTEP;
                 "The transport logic below is determined by the logical
                 "variables callhhowfar, domultiple and dosingle
                 "
@@ -1347,30 +1347,26 @@ $start_new_particle;
             [
                 "Do fast step
                 IF(ustep ~= 0)
-                [
-                    "Step in vacuum
-                    vstep  = ustep;
-                    tvstep = vstep;
-                    "( vstep is ustep truncated (possibly) by howfar
-                    " tvstep is the total curved path associated with vstep)
-                    edep = pzero; "no energy loss in vacuum
-                    $VACUUM-TRANSPORT-EM-FIELD;
-                        "additional vacuum transport in em field
-                    e_range = vacdst;
-                    $AUSCALL($TRANAUSB);
-                    "Transport the particle
-                    x(np) = x(np) + u(np)*vstep;
-                    y(np) = y(np) + v(np)*vstep;
-                    z(np) = z(np) + w(np)*vstep;
-                    dnear(np) = dnear(np) - vstep;
-                        "(dnear is distance to the nearest boundary
-                        " that goes along with particle stack and
-                        " which the user's howfar can supply (option)
-                    irold = ir(np); "save previous region
-                    $SET-ANGLES-EM-FIELD;
-                        "default for $SET-ANGLES-EM-FIELD; is ; (null)
-                         "(allows for EM field deflection
-                ] "end of vacuum step
+				[
+					edep = pzero; "no energy loss in vacuum
+					IF $EM_MACROS_ACTIVE [;
+					"transport in EMF in vacuum:"
+					"only a B or and E field can be active"
+					"(not both at the same time)"
+					$EMFieldInVacuum;
+				]ELSE[;
+			   "Step in vacuum vstep = ustep; tvstep = vstep; e_range = vacdst;
+				  $AUSCALL($TRANAUSB); "Transport the particle
+				  x(np) = x(np) + u(np)*vstep;
+				  y(np) = y(np) + v(np)*vstep;
+				  z(np) = z(np) + w(np)*vstep;
+				  dnear(np) = dnear(np) - vstep;
+				  "(dnear is distance to the nearest boundary
+				  " that goes along with particle stack and
+				  " which the user’s howfar can supply (option)
+				irold = ir(np); "save previous region
+				]"end vacuum step
+				]"end of non-EMF block"
 
                 $electron_region_change;
 
@@ -1382,7 +1378,7 @@ $start_new_particle;
             ] "Go try another big step in (possibly) new medium
 
             vstep = ustep;
-
+			$EM FIELD SS;
             IF(callhowfar)
             [
                 IF(exact_bca)
@@ -1437,6 +1433,7 @@ $start_new_particle;
             $DE-FLUCTUATION;
                 "default for $DE-FLUCTUATION; is ; (null)
             edep = de; "energy deposition variable for user
+			$ADD WORK EM FIELD;
             $ADD-WORK-EM-FIELD;  "e-loss or gain in em field
                 "Default for $ADD-WORK-EM-FIELD; is ; (null)
             ekef = eke - de;  "(final kinetic energy)
@@ -1523,9 +1520,12 @@ $start_new_particle;
             ]
             ELSE
             [
-                x_final = x(np) + u(np)*vstep;
-                y_final = y(np) + v(np)*vstep;
-                z_final = z(np) + w(np)*vstep;
+                IF ~($EM_MACROS_ACTIVE)[;
+				  x_final = x(np) + u(np)*vstep;
+				  y_final = y(np) + v(np)*vstep;
+				  z_final = z(np) + w(np)*vstep;
+				]
+				
                 IF ( domultiple | dosingle )
                 [
                     u_tmp = u(np); v_tmp = v(np); w_tmp = w(np);
@@ -4077,7 +4077,7 @@ $INTEGER
 ;
 $declare_max_medium;
 ;COMIN/ELECIN,THRESH,UPHIOT,RANDOM,CH-Steps/;
-
+;COMIN/EM/;
 count_pII_steps = count_pII_steps + 1;
 blccc   = blcc(medium);
 xcccc   = xcc(medium);
@@ -4201,7 +4201,7 @@ IF (sint02 > 1e-20)
     vt     = u2p*sphi0 + vt*cphi0;
 ]
 ELSE [ wt = w0*wt; ws = w0*ws; ]
-
+$EMFIELD PII;
 "Transport
 xf = x0 + tustep*ut;
 yf = y0 + tustep*vt;
@@ -4318,7 +4318,7 @@ $INTEGER
 ;
 $declare_max_medium;
 ;COMIN/ELECIN,THRESH,UPHIOT,RANDOM/;
-
+;COMIN/EM/;
 blccc   = blcc(medium);
 xcccc   = xcc(medium);
 
@@ -4418,7 +4418,7 @@ IF (sint02 > 1e-20)
     vt     = u2p*sphi0 + vt*cphi0;
 ]
 ELSE [ wt = w0*wt; ws = w0*ws; ]
-
+$EMFIELD PI;
 "Transport
 xf = x0 + tustep*ut;
 yf = y0 + tustep*vt;
